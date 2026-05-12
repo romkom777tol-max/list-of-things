@@ -1,0 +1,313 @@
+<!doctype html>
+<html class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Nunito', sans-serif; }
+    .bag-tag { transition: all 0.2s; }
+    .bag-tag:hover { transform: scale(1.05); }
+    .item-row { animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+ </head>
+ <body class="h-full">
+  <div id="app" class="h-full w-full overflow-auto" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative;">
+   <div class="max-w-2xl mx-auto p-4 pb-8 relative z-10"><!-- Header -->
+    <div class="text-center py-6">
+     <h1 id="main-title" class="text-3xl font-800 text-emerald-50">🧳 Збирання Речей</h1>
+     <p class="text-emerald-100 mt-1 text-sm font-600">Організуй пакування по сумках</p>
+    </div><!-- Stats -->
+    <div id="stats" class="grid grid-cols-3 gap-3 mb-5">
+     <div class="bg-white rounded-xl p-3 text-center shadow-sm border border-amber-200">
+      <div id="stat-total" class="text-2xl font-800 text-amber-800">
+       0
+      </div>
+      <div class="text-xs text-amber-600 font-600">
+       Всього
+      </div>
+     </div>
+     <div class="bg-white rounded-xl p-3 text-center shadow-sm border border-amber-200">
+      <div id="stat-packed" class="text-2xl font-800 text-emerald-600">
+       0
+      </div>
+      <div class="text-xs text-amber-600 font-600">
+       Спаковано
+      </div>
+     </div>
+     <div class="bg-white rounded-xl p-3 text-center shadow-sm border border-amber-200">
+      <div id="stat-bags" class="text-2xl font-800 text-indigo-600">
+       0
+      </div>
+      <div class="text-xs text-amber-600 font-600">
+       Сумок
+      </div>
+     </div>
+    </div><!-- Add Form -->
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-amber-200 mb-5">
+     <div class="grid grid-cols-1 gap-3"><input id="inp-name" type="text" placeholder="Назва речі (напр. футболка)" class="w-full px-3 py-2 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-sm">
+      <div class="grid grid-cols-2 gap-3"><select id="inp-category" class="px-3 py-2 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-sm bg-white"> <option value="Верхній одяг">Верхній одяг</option> <option value="Футболки/Кофти">Футболки/Кофти</option> <option value="Штани/Спідниці">Штани/Спідниці</option> <option value="Білизна">Білизна</option> <option value="Взуття">Взуття</option> <option value="Аксесуари">Аксесуари</option> <option value="Гігієна">Гігієна</option> <option value="Електроніка">Електроніка</option> <option value="Інше">Інше</option> </select> <select id="inp-bag" class="px-3 py-2 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-sm bg-white"> <option value="Валіза">🧳 Валіза</option> <option value="Рюкзак">🎒 Рюкзак</option> <option value="Сумка">👜 Сумка</option> <option value="Пакет">🛍️ Пакет</option> <option value="Ручна поклажа">✈️ Ручна поклажа</option> </select>
+      </div><button id="btn-add" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-700 py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"> <i data-lucide="plus" style="width:16px;height:16px;"></i> Додати річ </button>
+     </div>
+    </div><!-- Filter by bag -->
+    <div id="bag-filters" class="flex flex-wrap gap-2 mb-4"><button class="bag-tag px-3 py-1 rounded-full text-xs font-700 bg-amber-800 text-white" data-filter="all">Всі</button>
+    </div><!-- Items List -->
+    <div id="items-list" class="space-y-2"></div><!-- Hand luggage section -->
+    <div id="hand-luggage-section" class="hidden mt-6 pt-6 border-t-2 border-amber-300">
+     <h2 class="text-xl font-800 text-amber-50 mb-4 flex items-center gap-2">✈️ Ручна поклажа</h2>
+     <div id="hand-luggage-items" class="space-y-2"></div>
+    </div><!-- Empty state -->
+    <div id="empty-state" class="text-center py-12 text-amber-400">
+     <p class="text-lg">Додайте речі для пакування</p>
+    </div><!-- Delete confirmation -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+     <div class="bg-white rounded-xl p-5 max-w-xs w-full text-center shadow-lg">
+      <p class="text-amber-900 font-700 mb-4">Видалити цю річ?</p>
+      <div class="flex gap-3"><button id="confirm-cancel" class="flex-1 py-2 rounded-lg border border-amber-200 text-amber-700 font-600 text-sm">Скасувати</button> <button id="confirm-delete" class="flex-1 py-2 rounded-lg bg-red-500 text-white font-600 text-sm">Видалити</button>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+  const defaultConfig = {
+    app_title: 'Збирання Речей',
+    background_color: '#fffbeb',
+    surface_color: '#ffffff',
+    text_color: '#78350f',
+    primary_action_color: '#d97706',
+    secondary_action_color: '#4f46e5'
+  };
+
+  let allItems = [];
+  let currentFilter = 'all';
+  let deleteTarget = null;
+
+  // Element SDK
+  window.elementSdk.init({
+    defaultConfig,
+    onConfigChange: async (config) => {
+      document.getElementById('main-title').textContent = '🧳 ' + (config.app_title || defaultConfig.app_title);
+      document.getElementById('app').style.backgroundColor = config.background_color || defaultConfig.background_color;
+      document.querySelectorAll('.bg-white').forEach(el => el.style.backgroundColor = config.surface_color || defaultConfig.surface_color);
+      document.getElementById('main-title').style.color = config.text_color || defaultConfig.text_color;
+      document.getElementById('btn-add').style.backgroundColor = config.primary_action_color || defaultConfig.primary_action_color;
+    },
+    mapToCapabilities: (config) => ({
+      recolorables: [
+        { get: () => config.background_color || defaultConfig.background_color, set: (v) => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
+        { get: () => config.surface_color || defaultConfig.surface_color, set: (v) => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
+        { get: () => config.text_color || defaultConfig.text_color, set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
+        { get: () => config.primary_action_color || defaultConfig.primary_action_color, set: (v) => { config.primary_action_color = v; window.elementSdk.setConfig({ primary_action_color: v }); } },
+        { get: () => config.secondary_action_color || defaultConfig.secondary_action_color, set: (v) => { config.secondary_action_color = v; window.elementSdk.setConfig({ secondary_action_color: v }); } }
+      ],
+      borderables: [],
+      fontEditable: undefined,
+      fontSizeable: undefined
+    }),
+    mapToEditPanelValues: (config) => new Map([
+      ['app_title', config.app_title || defaultConfig.app_title]
+    ])
+  });
+
+  // Data SDK
+  const dataHandler = {
+    onDataChanged(data) {
+      allItems = data;
+      updateStats();
+      updateFilters();
+      renderItems();
+    }
+  };
+
+  window.dataSdk.init(dataHandler);
+
+  function updateStats() {
+    document.getElementById('stat-total').textContent = allItems.length;
+    document.getElementById('stat-packed').textContent = allItems.filter(i => i.packed).length;
+    const bags = new Set(allItems.map(i => i.bag));
+    document.getElementById('stat-bags').textContent = bags.size;
+  }
+
+  function updateFilters() {
+    const bags = [...new Set(allItems.map(i => i.bag))];
+    const container = document.getElementById('bag-filters');
+    const existing = [...container.children].map(el => el.dataset.filter);
+    const needed = ['all', ...bags];
+
+    // Remove extra
+    [...container.children].forEach(el => {
+      if (!needed.includes(el.dataset.filter)) el.remove();
+    });
+
+    // Add missing
+    needed.forEach(bag => {
+      if (!container.querySelector(`[data-filter="${bag}"]`)) {
+        const btn = document.createElement('button');
+        btn.className = 'bag-tag px-3 py-1 rounded-full text-xs font-700';
+        btn.dataset.filter = bag;
+        btn.textContent = bag === 'all' ? 'Всі' : bag;
+        btn.addEventListener('click', () => { currentFilter = bag; highlightFilter(); renderItems(); });
+        container.appendChild(btn);
+      }
+    });
+    highlightFilter();
+  }
+
+  function highlightFilter() {
+    document.querySelectorAll('#bag-filters .bag-tag').forEach(btn => {
+      if (btn.dataset.filter === currentFilter) {
+        btn.className = 'bag-tag px-3 py-1 rounded-full text-xs font-700 bg-amber-800 text-white';
+      } else {
+        btn.className = 'bag-tag px-3 py-1 rounded-full text-xs font-700 bg-amber-200 text-amber-800';
+      }
+    });
+  }
+
+  function renderItems() {
+    const list = document.getElementById('items-list');
+    const filtered = currentFilter === 'all' ? allItems : allItems.filter(i => i.bag === currentFilter);
+    const empty = document.getElementById('empty-state');
+    
+    // Separate hand luggage
+    const handLuggage = filtered.filter(i => i.bag === 'Ручна поклажа');
+    const regularItems = filtered.filter(i => i.bag !== 'Ручна поклажа');
+    
+    empty.classList.toggle('hidden', filtered.length > 0);
+    document.getElementById('hand-luggage-section').classList.toggle('hidden', handLuggage.length === 0 || currentFilter !== 'all');
+
+    // Render regular items
+    renderItemsInContainer(list, regularItems);
+    
+    // Render hand luggage separately
+    const hlContainer = document.getElementById('hand-luggage-items');
+    renderItemsInContainer(hlContainer, handLuggage);
+  }
+
+  function renderItemsInContainer(container, items) {
+    // Group by category
+    const groups = {};
+    items.forEach(item => {
+      if (!groups[item.category]) groups[item.category] = [];
+      groups[item.category].push(item);
+    });
+
+    const existingGroups = new Map([...container.children].map(el => [el.dataset.group, el]));
+    const groupKeys = Object.keys(groups);
+
+    // Remove old groups
+    existingGroups.forEach((el, key) => { if (!groupKeys.includes(key)) el.remove(); });
+
+    groupKeys.forEach(cat => {
+      let groupEl = container.querySelector(`[data-group="${cat}"]`);
+      if (!groupEl) {
+        groupEl = document.createElement('div');
+        groupEl.dataset.group = cat;
+        groupEl.className = 'mb-4';
+        container.appendChild(groupEl);
+      }
+
+      const items = groups[cat];
+      const packedCount = items.filter(i => i.packed).length;
+
+      groupEl.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-700 text-amber-900 text-sm">${cat}</h3>
+          <span class="text-xs text-amber-500">${packedCount}/${items.length}</span>
+        </div>
+        ${items.map(item => `
+          <div class="item-row flex items-center gap-3 bg-white rounded-lg p-3 mb-1.5 border border-amber-100 shadow-sm" data-id="${item.__backendId}">
+            <button class="toggle-btn flex-shrink-0 w-6 h-6 rounded-full border-2 ${item.packed ? 'bg-emerald-500 border-emerald-500' : 'border-amber-300'} flex items-center justify-center" data-bid="${item.__backendId}">
+              ${item.packed ? '<i data-lucide="check" style="width:14px;height:14px;color:white;"></i>' : ''}
+            </button>
+            <div class="flex-1 min-w-0">
+              <span class="text-sm font-600 ${item.packed ? 'line-through text-amber-400' : 'text-amber-900'}">${item.name}</span>
+              <span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">${item.bag}</span>
+            </div>
+            <button class="del-btn text-amber-300 hover:text-red-500 transition-colors" data-bid="${item.__backendId}">
+              <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+            </button>
+          </div>
+        `).join('')}
+      `;
+    });
+
+    lucide.createIcons();
+
+    // Attach events
+    container.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => togglePacked(btn.dataset.bid));
+    });
+    container.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', () => showDeleteConfirm(btn.dataset.bid));
+    });
+  }
+
+  async function togglePacked(bid) {
+    const item = allItems.find(i => i.__backendId === bid);
+    if (!item) return;
+    const result = await window.dataSdk.update({ ...item, packed: !item.packed });
+    if (!result.isOk) showToast('Помилка оновлення');
+  }
+
+  function showDeleteConfirm(bid) {
+    deleteTarget = bid;
+    document.getElementById('confirm-modal').classList.remove('hidden');
+  }
+
+  document.getElementById('confirm-cancel').addEventListener('click', () => {
+    document.getElementById('confirm-modal').classList.add('hidden');
+    deleteTarget = null;
+  });
+
+  document.getElementById('confirm-delete').addEventListener('click', async () => {
+    document.getElementById('confirm-modal').classList.add('hidden');
+    if (!deleteTarget) return;
+    const item = allItems.find(i => i.__backendId === deleteTarget);
+    if (item) {
+      const result = await window.dataSdk.delete(item);
+      if (!result.isOk) showToast('Помилка видалення');
+    }
+    deleteTarget = null;
+  });
+
+  document.getElementById('btn-add').addEventListener('click', async () => {
+    const name = document.getElementById('inp-name').value.trim();
+    if (!name) return;
+    if (allItems.length >= 999) { showToast('Досягнуто ліміт 999 речей'); return; }
+
+    const btn = document.getElementById('btn-add');
+    btn.disabled = true; btn.textContent = '...';
+
+    const result = await window.dataSdk.create({
+      name,
+      category: document.getElementById('inp-category').value,
+      bag: document.getElementById('inp-bag').value,
+      packed: false
+    });
+
+    btn.disabled = false; btn.innerHTML = '<i data-lucide="plus" style="width:16px;height:16px;"></i> Додати річ';
+    lucide.createIcons();
+
+    if (result.isOk) { document.getElementById('inp-name').value = ''; }
+    else { showToast('Помилка додавання'); }
+  });
+
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-600 z-50 shadow-lg';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  lucide.createIcons();
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fa8e6a4d464e5d7',t:'MTc3ODU4MzQzMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
